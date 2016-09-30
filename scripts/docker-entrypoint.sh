@@ -58,6 +58,8 @@ DB_DATA_DIR="$(_datadir)"
 ## INSTALLATION
 ##
 if [ ! -d "${DB_DATA_DIR}/mysql" ]; then
+
+	# Create datadir if not exist yet
 	if [ ! -d "${DB_DATA_DIR}" ]; then
 		run "mkdir -p ${DB_DATA_DIR}"
 		run "chown -R ${DB_USER}:${DB_GROUP} ${DB_DATA_DIR}"
@@ -70,20 +72,27 @@ if [ ! -d "${DB_DATA_DIR}/mysql" ]; then
 	# Start server
 	run "mysqld --skip-networking &"
 
+
 	# Wait for it to finish
 	i=0
-	max=30
+	max=60
 	while [ $i -lt $max ]; do
 		if echo 'SELECT 1' |  mysql --protocol=socket -uroot  > /dev/null 2>&1; then
 			break
 		fi
 		echo 'MySQL init process in progress...'
-		sleep 1
+		sleep 1s
 		i=$(( i + 1 ))
 	done
 
+
 	# Get current pid
 	pid="$(pgrep mysqld | head -1)"
+	if [ "${pid}" = "" ]; then
+		echo >&2  "MySQL init process failed..."
+		exit 1
+	fi
+
 
 	# Bootstrap MySQL
 	echo "DELETE FROM mysql.user ;" | mysql --protocol=socket -uroot
@@ -92,15 +101,16 @@ if [ ! -d "${DB_DATA_DIR}/mysql" ]; then
 	echo "DROP DATABASE IF EXISTS test ;" | mysql --protocol=socket -uroot
 	echo "FLUSH PRIVILEGES ;" | mysql --protocol=socket -uroot
 
+
 	# Shutdown MySQL
 	kill -s TERM "$pid"
 	i=0
-	max=30
+	max=60
 	while [ $i -lt $max ]; do
 		if ! pgrep mysqld >/dev/null 2>&1; then
 			break
 		fi
-		sleep 1
+		sleep 1s
 		i=$(( i + 1 ))
 	done
 
@@ -109,7 +119,6 @@ if [ ! -d "${DB_DATA_DIR}/mysql" ]; then
 	echo
 
 else
-	#run "chown -R ${DB_USER_NAME}:${DB_USER_GROUP} ${DB_DATA_DIR}"
 	echo
 	echo 'MySQL found existing data directory. Ready for start up.'
 	echo
