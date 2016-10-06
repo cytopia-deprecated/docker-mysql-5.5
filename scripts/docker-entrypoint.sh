@@ -5,6 +5,7 @@
 ##
 DB_USER="mysql"
 DB_GROUP="mysql"
+DB_CONFIG="/etc/mysql/my.cnf"
 
 
 ##
@@ -36,6 +37,65 @@ if ! set | grep '^MYSQL_ROOT_PASSWORD=' >/dev/null 2>&1; then
 	echo >&2 "\$MYSQL_ROOT_PASSWORD must be set."
 	exit 1
 fi
+
+##
+## Custom settings (supplied via Docker env variables)
+##
+if set | grep '^MYSQL_SOCKET_DIR=' >/dev/null 2>&1; then
+	run "sed -i'' 's|^socket.*$|socket = ${MYSQL_SOCKET_DIR}/mysqld.sock|g' ${DB_CONFIG}"
+	if [ ! -d "${MYSQL_SOCKET_DIR}"  ]; then run "mkdir -p ${MYSQL_SOCKET_DIR}" ; fi
+	run "chown -R mysql:mysql ${MYSQL_SOCKET_DIR}"
+fi
+
+
+##
+## More Custom settings
+##
+run "echo '[mysqld]' > /etc/mysql/conf.d/custom.cnf"
+
+# Logging
+if set | grep '^MYSQL_GENERAL_LOG=' >/dev/null 2>&1; then
+	if [ "${MYSQL_GENERAL_LOG}" != "" ]; then
+		run "echo 'general_log = ${MYSQL_GENERAL_LOG}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+
+# Performance
+if set | grep '^MYSQL_INNODB_BUFFER_POOL_SIZE=' >/dev/null 2>&1; then
+	if [ "${MYSQL_INNODB_BUFFER_POOL_SIZE}" != "" ]; then
+		run "echo 'innodb_buffer_pool_size = ${MYSQL_INNODB_BUFFER_POOL_SIZE}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+if set | grep '^MYSQL_JOIN_BUFFER_SIZE=' >/dev/null 2>&1; then
+	if [ "${MYSQL_JOIN_BUFFER_SIZE}" != "" ]; then
+		run "echo 'join_buffer_size = ${MYSQL_JOIN_BUFFER_SIZE}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+if set | grep '^MYSQL_SORT_BUFFER_SIZE=' >/dev/null 2>&1; then
+	if [ "${MYSQL_SORT_BUFFER_SIZE}" != "" ]; then
+		run "echo 'sort_buffer_size = ${MYSQL_SORT_BUFFER_SIZE}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+if set | grep '^MYSQL_READ_RND_BUFFER_SIZE=' >/dev/null 2>&1; then
+	if [ "${MYSQL_READ_RND_BUFFER_SIZE}" != "" ]; then
+		run "echo 'read_rnd_buffer_size = ${MYSQL_READ_RND_BUFFER_SIZE}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+
+# Security
+if set | grep '^MYSQL_SYMBOLIC_LINKS=' >/dev/null 2>&1; then
+	if [ "${MYSQL_SYMBOLIC_LINKS}" != "" ]; then
+		run "echo 'symbolic-links = ${MYSQL_SYMBOLIC_LINKS}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+if set | grep '^MYSQL_SQL_MODE=' >/dev/null 2>&1; then
+	if [ "${MYSQL_SQL_MODE}" != "" ]; then
+		run "echo 'sql_mode = ${MYSQL_SQL_MODE}' >> /etc/mysql/conf.d/custom.cnf"
+	fi
+fi
+
+
+
 
 
 ##
@@ -124,5 +184,6 @@ else
 	echo
 fi
 
-
+run "hostname -I"
+run "mysqld --version"
 run "mysqld"

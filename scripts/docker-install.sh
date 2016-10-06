@@ -1,5 +1,30 @@
 #!/bin/sh -eu
 
+
+##
+## Variables
+##
+MY_USER="mysql"
+MY_GROUP="mysql"
+MY_UID="27"
+MY_GID="27"
+
+MYSQL_INCL="/etc/mysql/conf.d"
+
+##
+## Can be overwritten in docker-entrypoint.sh
+## via user-supplied variables
+##
+MYSQL_DEF_DAT="/var/lib/mysql"
+MYSQL_DEF_RUN="/var/lib/mysql"
+MYSQL_DEF_LOG="/var/log/mysql"
+MYSQL_DEF_PID="/var/run/mysqld"
+
+
+
+##
+## Functions
+##
 print_headline() {
 	_txt="${1}"
 	_blue="\033[0;34m"
@@ -31,11 +56,9 @@ run() {
 ###
 ### Adding User/Group
 ###
-print_headline "1. Adding User/Group"
-# Add user and group first to make sure their IDs get
-# assigned consistently, regardless of whatever dependencies get added.
-run "groupadd -r mysql"
-run "adduser mysql -M -s /sbin/nologin -g mysql"
+print_headline "1. Adding Users"
+run "groupadd -g ${MY_GID} -r ${MY_GROUP}"
+run "adduser ${MY_USER} -u ${MY_UID} -M -s /sbin/nologin -g ${MY_GROUP}"
 
 
 
@@ -43,8 +66,7 @@ run "adduser mysql -M -s /sbin/nologin -g mysql"
 ### Adding Repositories
 ###
 print_headline "2. Adding Repository"
-run "yum -y install epel-release"
-run "rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm"
+run "rpm -ivh https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm"
 run "yum-config-manager --enable mysql55-community"
 run "yum-config-manager --disable mysql56-community"
 run "yum-config-manager --disable mysql57-community"
@@ -75,3 +97,43 @@ run "yum -y install \
 	mysql-community-test
 	"
 
+
+
+###
+### Configure MySQL
+###
+print_headline "5. Configure MySQL"
+
+# Add default directories and permission
+if [ ! -d "${MYSQL_INCL}" ]; then run "mkdir -p ${MYSQL_INCL}"; fi
+
+if [ ! -d "${MYSQL_DEF_DAT}"  ]; then run "mkdir -p ${MYSQL_DEF_DAT}" ; fi
+if [ ! -d "${MYSQL_DEF_RUN}"  ]; then run "mkdir -p ${MYSQL_DEF_RUN}" ; fi
+if [ ! -d "${MYSQL_DEF_PID}"  ]; then run "mkdir -p ${MYSQL_DEF_PID}" ; fi
+if [ ! -d "${MYSQL_DEF_LOG}"  ]; then run "mkdir -p ${MYSQL_DEF_LOG}" ; fi
+
+run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_DAT}"
+run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_RUN}"
+run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_PID}"
+
+
+
+# Add default config
+run "echo '[client]'										> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+
+run "echo '[mysql]'											>> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+
+run "echo '[mysqld]'										>> /etc/mysql/my.cnf"
+run "echo 'skip-host-cache'									>> /etc/mysql/my.cnf"
+run "echo 'skip-name-resolve'								>> /etc/mysql/my.cnf"
+run "echo 'datadir = ${MYSQL_DEF_DAT}'						>> /etc/mysql/my.cnf"
+run "echo 'user = ${MY_USER}'								>> /etc/mysql/my.cnf"
+run "echo 'port = 3306'										>> /etc/mysql/my.cnf"
+run "echo 'bind-address = 0.0.0.0'							>> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+run "echo 'pid-file = ${MYSQL_DEF_PID}/mysqld.pid'			>> /etc/mysql/my.cnf"
+run "echo 'general_log_file = ${MYSQL_DEF_LOG}/mysql.log'	>> /etc/mysql/my.cnf"
+run "echo 'log-error = ${MYSQL_DEF_LOG}/error.log'			>> /etc/mysql/my.cnf"
+run "echo '!includedir ${MYSQL_INCL}/'						>> /etc/mysql/my.cnf"
