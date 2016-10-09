@@ -12,11 +12,16 @@ COPY ./scripts/docker-install.sh /
 COPY ./scripts/docker-entrypoint.sh /
 
 
-
 ##
 ## Install
 ##
 RUN /docker-install.sh
+
+
+##
+## Ports
+##
+EXPOSE 3306
 
 
 ##
@@ -31,15 +36,3 @@ VOLUME /var/run/mysqld
 ## Entrypoint
 ##
 ENTRYPOINT ["/docker-entrypoint.sh"]
-
-
-##
-## Ports
-##
-EXPOSE 3306
-
-
-##
-## Start
-##
-#CMD ["mysqld"]
