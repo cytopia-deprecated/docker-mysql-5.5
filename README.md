@@ -31,7 +31,7 @@ $ docker run -i -e MYSQL_ROOT_PASSWORD=my-secret-pw -t cytopia/mysql-5.5
 #### Optional environmental variables
 
 | Variable | Type | Description |
-|----------|--------------------|
+|----------|------|-------------|
 | DEBUG_COMPOSE_ENTRYPOINT | bool | Show shell commands executed during start.<br/>Value: `0` or `1` |
 | TIMEZONE | string | Set docker OS timezone.<br/>(Example: `Europe/Berlin`) |
 | MYSQL_SOCKET_DIR | string | Path inside the docker to the socket directory.<br/><br/>Used to separate socket directory from data directory in order to mount it to the docker host or other docker containers. |
