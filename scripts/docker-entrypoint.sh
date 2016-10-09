@@ -77,20 +77,23 @@ _get_mysql_default_config() {
 _set_mysql_custom_settings() {
 	_mysql_key="${1}"
 	_shell_var="${2}"
-	_shell_val="$( eval "echo \${${_shell_var}}" )"
 
 
 	if ! set | grep "^${_shell_var}=" >/dev/null 2>&1; then
 		_mysql_val="$( _get_mysql_default_config "${_mysql_key}" )"
 		log "info" "\$${_shell_var} not set. Keeping default: ${_mysql_key}=${_mysql_val}"
 
-	elif [ "${_shell_val}" = "" ]; then
-		_mysql_val="$( _get_mysql_default_config "${_mysql_key}" )"
-		log "info" "\$${_shell_var} is empty. ${_mysql_key}=${_mysql_val}"
-
 	else
-		log "info" "Setting MySQL: ${_mysql_key}=${_shell_val}"
-		run "echo '${_mysql_key} = ${_shell_val}' >> ${DB_CUSTOM_CONFIG}"
+		_shell_val="$( eval "echo \${${_shell_var}}" )"
+
+		if [ "${_shell_val}" = "" ]; then
+			_mysql_val="$( _get_mysql_default_config "${_mysql_key}" )"
+			log "info" "\$${_shell_var} is empty. ${_mysql_key}=${_mysql_val}"
+
+		else
+			log "info" "Setting MySQL: ${_mysql_key}=${_shell_val}"
+			run "echo '${_mysql_key} = ${_shell_val}' >> ${DB_CUSTOM_CONFIG}"
+		fi
 	fi
 }
 
