@@ -6,6 +6,17 @@ MAINTAINER "cytopia" <cytopia@everythingcli.org>
 
 
 ##
+## Labels
+##
+LABEL \
+	name="cytopia's MySQL 5.5 Image" \
+	image="mysql-5.5" \
+	vendor="cytopia" \
+	license="MIT" \
+	build-date="2016-10-09"
+
+
+##
 ## Bootstrap Scipts
 ##
 COPY ./scripts/docker-install.sh /
