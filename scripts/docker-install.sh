@@ -1,9 +1,9 @@
 #!/bin/sh -eu
 
 
-##
-## Variables
-##
+###
+### Variables
+###
 MY_USER="mysql"
 MY_GROUP="mysql"
 MY_UID="27"
@@ -11,10 +11,10 @@ MY_GID="27"
 
 MYSQL_INCL="/etc/mysql/conf.d"
 
-##
-## Can be overwritten in docker-entrypoint.sh
-## via user-supplied variables
-##
+###
+### Can be overwritten in docker-entrypoint.sh
+### via user-supplied variables
+###
 MYSQL_DEF_DAT="/var/lib/mysql"
 MYSQL_DEF_RUN="/var/lib/mysql"
 MYSQL_DEF_LOG="/var/log/mysql"
@@ -22,9 +22,9 @@ MYSQL_DEF_PID="/var/run/mysqld"
 
 
 
-##
-## Functions
-##
+###
+### Functions
+###
 print_headline() {
 	_txt="${1}"
 	_blue="\033[0;34m"
@@ -137,3 +137,18 @@ run "echo 'pid-file = ${MYSQL_DEF_PID}/mysqld.pid'			>> /etc/mysql/my.cnf"
 run "echo 'general_log_file = ${MYSQL_DEF_LOG}/mysql.log'	>> /etc/mysql/my.cnf"
 run "echo 'log-error = ${MYSQL_DEF_LOG}/error.log'			>> /etc/mysql/my.cnf"
 run "echo '!includedir ${MYSQL_INCL}/'						>> /etc/mysql/my.cnf"
+
+
+###
+### Cleanup unecessary packages
+###
+print_headline "6. Cleanup unecessary packages"
+run "yum -y autoremove"
+
+
+###
+### Fix Cleanup
+###
+print_headline "7. Fix Cleanup"
+run "yum -y install hostname" # required for mysql_install_db
+
