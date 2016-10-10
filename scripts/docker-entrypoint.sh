@@ -189,6 +189,7 @@ run "echo '[mysqld]' > ${DB_CUSTOM_CONFIG}"
 _set_mysql_custom_settings "general-log" "MYSQL_GENERAL_LOG"
 
 # Performance
+_set_mysql_custom_settings "innodb-log-file-size" "MYSQL_INNODB_LOG_FILE_SIZE"
 _set_mysql_custom_settings "innodb-buffer-pool-size" "MYSQL_INNODB_BUFFER_POOL_SIZE"
 _set_mysql_custom_settings "join-buffer-size" "MYSQL_JOIN_BUFFER_SIZE"
 _set_mysql_custom_settings "sort-buffer-size" "MYSQL_SORT_BUFFER_SIZE"
@@ -199,7 +200,17 @@ _set_mysql_custom_settings "symbolic-links" "MYSQL_SYMBOLIC_LINKS"
 _set_mysql_custom_settings "sql-mode" "MYSQL_SQL_MODE"
 
 
-
+# Repairing
+if set | grep "^MYSQL_INNODB_FORCE_RECOVERY=" >/dev/null 2>&1; then
+	if [ "${MYSQL_INNODB_FORCE_RECOVERY}" != "" ] && [ "${MYSQL_INNODB_FORCE_RECOVERY}" != "0" ]; then
+		_set_mysql_custom_settings "innodb-force-recovery" "MYSQL_INNODB_FORCE_RECOVERY"
+	fi
+fi
+if set | grep "^MYSQL_MODE=" >/dev/null 2>&1; then
+	if [ "${MYSQL_MODE}" != "" ] && [ "${MYSQL_MODE}" != "0" ]; then
+		_set_mysql_custom_settings "mode" "MYSQL_MODE"
+	fi
+fi
 
 
 
@@ -216,7 +227,9 @@ DB_DATA_DIR="$( _get_mysql_default_config "datadir" )"
 ##
 ## INSTALLATION
 ##
-if [ -d "${DB_DATA_DIR}/mysql" ]; then
+
+# Directory already exists and has content (other thab '.' and '..')
+if [ -d "${DB_DATA_DIR}/mysql" ] && [ "$( ls -A "${DB_DATA_DIR}/mysql" )" ]; then
 	log "info" "Found existing data directory. MySQL already setup."
 
 else

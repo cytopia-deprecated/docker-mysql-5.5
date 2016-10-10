@@ -1,5 +1,6 @@
 #!/bin/sh -eu
 
+
 run() {
 	_cmd="${1}"
 
@@ -11,6 +12,11 @@ run() {
 	printf "${_red}%s \$ ${_green}${_cmd}${_reset}\n" "${_user}"
 	sh -c "LANG=C LC_ALL=C ${_cmd}"
 }
+
+_args=""
+if [ "${#}" != "0" ]; then
+	_args="${*}"
+fi
 
 # Check Dockerfile
 if [ ! -f "Dockerfile" ]; then
@@ -25,4 +31,4 @@ if ! grep -q 'image=".*"' Dockerfile > /dev/null 2>&1; then
 fi
 NAME="$( grep 'image=".*"' Dockerfile | sed 's/^[[:space:]]*//g' | awk -F'"' '{print $2}' )"
 
-run "docker run -i -t cytopia/${NAME}"
+run "docker run -i ${_args} -t cytopia/${NAME}"
