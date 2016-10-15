@@ -9,16 +9,17 @@ MY_GROUP="mysql"
 MY_UID="27"
 MY_GID="27"
 
+MYSQL_DEF_INCL="/etc/mysql/docker-default.d"
 MYSQL_INCL="/etc/mysql/conf.d"
 
 ###
 ### Can be overwritten in docker-entrypoint.sh
 ### via user-supplied variables
 ###
-MYSQL_DEF_DAT="/var/lib/mysql"
-MYSQL_DEF_RUN="/var/lib/mysql"
-MYSQL_DEF_LOG="/var/log/mysql"
-MYSQL_DEF_PID="/var/run/mysqld"
+MYSQL_DEF_DAT="/var/lib/mysql"		# Data directory
+MYSQL_DEF_LOG="/var/log/mysql"		# Log directory
+MYSQL_DEF_PID="/var/run/mysqld"		# Pid directory
+MYSQL_DEF_SCK="/var/sock/mysqld"	# Socket directory
 
 
 
@@ -105,25 +106,27 @@ run "yum -y install \
 print_headline "5. Configure MySQL"
 
 # Add default directories and permission
-if [ ! -d "${MYSQL_INCL}" ]; then run "mkdir -p ${MYSQL_INCL}"; fi
+if [ ! -d "${MYSQL_DEF_INCL}" ]; then run "mkdir -p ${MYSQL_DEF_INCL}"; fi
+if [ ! -d "${MYSQL_INCL}" ];     then run "mkdir -p ${MYSQL_INCL}";     fi
+
 
 if [ ! -d "${MYSQL_DEF_DAT}"  ]; then run "mkdir -p ${MYSQL_DEF_DAT}" ; fi
-if [ ! -d "${MYSQL_DEF_RUN}"  ]; then run "mkdir -p ${MYSQL_DEF_RUN}" ; fi
+if [ ! -d "${MYSQL_DEF_SCK}"  ]; then run "mkdir -p ${MYSQL_DEF_SCK}" ; fi
 if [ ! -d "${MYSQL_DEF_PID}"  ]; then run "mkdir -p ${MYSQL_DEF_PID}" ; fi
 if [ ! -d "${MYSQL_DEF_LOG}"  ]; then run "mkdir -p ${MYSQL_DEF_LOG}" ; fi
 
 run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_DAT}"
-run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_RUN}"
+run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_SCK}"
 run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_PID}"
 
 
 
 # Add default config
 run "echo '[client]'										> /etc/mysql/my.cnf"
-run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_SCK}/mysqld.sock'			>> /etc/mysql/my.cnf"
 
 run "echo '[mysql]'											>> /etc/mysql/my.cnf"
-run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_SCK}/mysqld.sock'			>> /etc/mysql/my.cnf"
 
 run "echo '[mysqld]'										>> /etc/mysql/my.cnf"
 run "echo 'skip-host-cache'									>> /etc/mysql/my.cnf"
@@ -132,10 +135,12 @@ run "echo 'datadir = ${MYSQL_DEF_DAT}'						>> /etc/mysql/my.cnf"
 run "echo 'user = ${MY_USER}'								>> /etc/mysql/my.cnf"
 run "echo 'port = 3306'										>> /etc/mysql/my.cnf"
 run "echo 'bind-address = 0.0.0.0'							>> /etc/mysql/my.cnf"
-run "echo 'socket = ${MYSQL_DEF_RUN}/mysqld.sock'			>> /etc/mysql/my.cnf"
+run "echo 'socket = ${MYSQL_DEF_SCK}/mysqld.sock'			>> /etc/mysql/my.cnf"
 run "echo 'pid-file = ${MYSQL_DEF_PID}/mysqld.pid'			>> /etc/mysql/my.cnf"
 run "echo 'general_log_file = ${MYSQL_DEF_LOG}/mysql.log'	>> /etc/mysql/my.cnf"
+run "echo 'slow_query_log_file = ${MYSQL_DEF_LOG}/slow.log'	>> /etc/mysql/my.cnf"
 run "echo 'log-error = ${MYSQL_DEF_LOG}/error.log'			>> /etc/mysql/my.cnf"
+run "echo '!includedir ${MYSQL_DEF_INCL}/'					>> /etc/mysql/my.cnf"
 run "echo '!includedir ${MYSQL_INCL}/'						>> /etc/mysql/my.cnf"
 
 

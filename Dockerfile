@@ -13,7 +13,7 @@ LABEL \
 	image="mysql-5.5" \
 	vendor="cytopia" \
 	license="MIT" \
-	build-date="2016-10-10"
+	build-date="2016-10-15"
 
 
 ##
@@ -40,7 +40,8 @@ EXPOSE 3306
 ##
 VOLUME /var/lib/mysql
 VOLUME /var/log/mysql
-VOLUME /var/run/mysqld
+VOLUME /var/sock/mysqld
+VOLUME /etc/mysql/conf.d
 
 
 ##

@@ -7,8 +7,7 @@ DEBUG_COMMANDS=0
 
 DB_USER="mysql"
 DB_GROUP="mysql"
-DB_CONFIG="/etc/mysql/my.cnf"
-DB_CUSTOM_CONFIG="/etc/mysql/conf.d/custom.cnf"
+DB_CUSTOM_CONF_DIR="/etc/mysql/docker-default.d"
 
 
 ###
@@ -65,7 +64,7 @@ log() {
 ###
 ### Read out MySQL Default config
 ###
-_get_mysql_default_config() {
+get_mysql_default_config() {
 	_key="${1}"
 	mysqld --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | grep "^${_key}" | awk '{ print $2; exit }'
 }
@@ -74,25 +73,42 @@ _get_mysql_default_config() {
 ###
 ### Set MySQL Custom options
 ###
-_set_mysql_custom_settings() {
-	_mysql_key="${1}"
-	_shell_var="${2}"
+set_mysql_custom_settings() {
+	_conf_sect="${1}"
+	_mysql_key="${2}"
+	_shell_var="${3}"
+	_extra_val="${4}"	# Extra value to append to _shell_var
+	_conf_file="${5}"
 
 
 	if ! set | grep "^${_shell_var}=" >/dev/null 2>&1; then
-		_mysql_val="$( _get_mysql_default_config "${_mysql_key}" )"
-		log "info" "\$${_shell_var} not set. Keeping default: ${_mysql_key}=${_mysql_val}"
+		_mysql_val="$( get_mysql_default_config "${_mysql_key}" )"
+		log "info" "\$${_shell_var} not set. Keeping default: [${_conf_sect}] ${_mysql_key}=${_mysql_val}"
 
 	else
 		_shell_val="$( eval "echo \${${_shell_var}}" )"
+		_value="${_shell_val}${_extra_val}"
 
-		if [ "${_shell_val}" = "" ]; then
-			_mysql_val="$( _get_mysql_default_config "${_mysql_key}" )"
-			log "info" "\$${_shell_var} is empty. ${_mysql_key}=${_mysql_val}"
+		if [ "${_value}" = "" ]; then
+			_mysql_val="$( get_mysql_default_config "${_mysql_key}" )"
+			log "warn" "\$${_shell_var} is empty. Keeping default: [${_conf_sect}] ${_mysql_key}=${_mysql_val}"
 
 		else
-			log "info" "Setting MySQL: ${_mysql_key}=${_shell_val}"
-			run "echo '${_mysql_key} = ${_shell_val}' >> ${DB_CUSTOM_CONFIG}"
+			log "info" "Setting MySQL: [${_conf_sect}] ${_mysql_key}=${_value}"
+
+			# Add file
+			if [ ! -f "${_conf_file}" ]; then
+				run "touch ${_conf_file}"
+			fi
+
+			# Add section
+			if ! grep -q "\[${_conf_sect}\]" "${_conf_file}"; then
+				run "echo '[${_conf_sect}]' >> ${_conf_file}"
+				run "echo '${_mysql_key} = ${_value}' >> ${_conf_file}"
+
+			else
+				run "sed -i'' 's|\[${_conf_sect}\]|\[${_conf_sect}\]\n${_mysql_key} = ${_value}|g' ${_conf_file}"
+			fi
 		fi
 	fi
 }
@@ -154,64 +170,18 @@ log "info" "Docker date set to: $(date)"
 
 
 
-###
-### Custom MySQL Socket Path
-###
-
-# socket
-mysql_key="socket"
-if ! set | grep '^MYSQL_SOCKET_DIR=' >/dev/null 2>&1; then
-	mysql_val="$( _get_mysql_default_config "${mysql_key}" )"
-	log "info" "\$MYSQL_SOCKET_DIR not set. Keeping default: ${mysql_key}=${mysql_val}"
-
-elif [ "${MYSQL_SOCKET_DIR}" = "" ]; then
-	mysql_val="$( _get_mysql_default_config "${mysql_key}" )"
-	log "info" "\$MYSQL_SOCKET_DIR is empty. Keeping default: ${mysql_key}=${mysql_val}"
-
-else
-	log "info" "Setting MySQL: ${mysql_key}=${MYSQL_SOCKET_DIR}/mysqld.sock"
-	run "sed -i'' 's|^socket.*$|${mysql_key} = ${MYSQL_SOCKET_DIR}/mysqld.sock|g' ${DB_CONFIG}"
-
-	if [ ! -d "${MYSQL_SOCKET_DIR}"  ]; then
-		run "mkdir -p ${MYSQL_SOCKET_DIR}"
-	fi
-	run "chown -R mysql:mysql ${MYSQL_SOCKET_DIR}"
-fi
-
-
 
 ###
 ### Add custom Configuration
 ###
-run "echo '[mysqld]' > ${DB_CUSTOM_CONFIG}"
 
-# Logging
-_set_mysql_custom_settings "general-log" "MYSQL_GENERAL_LOG"
+# MYSQL_GENERAL_LOG
+set_mysql_custom_settings "mysqld" "general-log" "MYSQL_GENERAL_LOG" "" "${DB_CUSTOM_CONF_DIR}/logging.cnf"
 
-# Performance
-_set_mysql_custom_settings "innodb-log-file-size" "MYSQL_INNODB_LOG_FILE_SIZE"
-_set_mysql_custom_settings "innodb-buffer-pool-size" "MYSQL_INNODB_BUFFER_POOL_SIZE"
-_set_mysql_custom_settings "join-buffer-size" "MYSQL_JOIN_BUFFER_SIZE"
-_set_mysql_custom_settings "sort-buffer-size" "MYSQL_SORT_BUFFER_SIZE"
-_set_mysql_custom_settings "read-rnd-buffer-size" "MYSQL_READ_RND_BUFFER_SIZE"
-
-# Security
-_set_mysql_custom_settings "symbolic-links" "MYSQL_SYMBOLIC_LINKS"
-_set_mysql_custom_settings "sql-mode" "MYSQL_SQL_MODE"
-
-
-# Repairing
-if set | grep "^MYSQL_INNODB_FORCE_RECOVERY=" >/dev/null 2>&1; then
-	if [ "${MYSQL_INNODB_FORCE_RECOVERY}" != "" ] && [ "${MYSQL_INNODB_FORCE_RECOVERY}" != "0" ]; then
-		_set_mysql_custom_settings "innodb-force-recovery" "MYSQL_INNODB_FORCE_RECOVERY"
-	fi
-fi
-if set | grep "^MYSQL_MODE=" >/dev/null 2>&1; then
-	if [ "${MYSQL_MODE}" != "" ] && [ "${MYSQL_MODE}" != "0" ]; then
-		_set_mysql_custom_settings "mode" "MYSQL_MODE"
-	fi
-fi
-
+# MYSQL_SOCKET_DIR
+set_mysql_custom_settings "client" "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "${DB_CUSTOM_CONF_DIR}/socket.cnf"
+set_mysql_custom_settings "mysql"  "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "${DB_CUSTOM_CONF_DIR}/socket.cnf"
+set_mysql_custom_settings "mysqld" "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "${DB_CUSTOM_CONF_DIR}/socket.cnf"
 
 
 
@@ -221,7 +191,7 @@ fi
 # INSTALLATION
 ################################################################################
 
-DB_DATA_DIR="$( _get_mysql_default_config "datadir" )"
+DB_DATA_DIR="$( get_mysql_default_config "datadir" )"
 
 
 ##
