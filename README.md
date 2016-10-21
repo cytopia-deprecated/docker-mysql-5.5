@@ -1,24 +1,22 @@
 # MySQL 5.5 Docker
 
-[![](https://images.microbadger.com/badges/version/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5") [![](https://images.microbadger.com/badges/image/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5") [![](https://images.microbadger.com/badges/license/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5")
+[![Build Status](https://travis-ci.org/cytopia/docker-mysql-5.5.svg?branch=master)](https://travis-ci.org/cytopia/docker-mysql-5.5) [![](https://images.microbadger.com/badges/version/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5") [![](https://images.microbadger.com/badges/image/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5") [![](https://images.microbadger.com/badges/license/cytopia/mysql-5.5.svg)](https://microbadger.com/images/cytopia/mysql-5.5 "mysql-5.5")
 
 [![cytopia/mysql-5.5](http://dockeri.co/image/cytopia/mysql-5.5)](https://hub.docker.com/r/cytopia/mysql-5.5/)
 
-----
-
-MySQL 5.5 Docker on CentOS 7
-
+**mysql 5.5 | [mysql 5.6](https://github.com/cytopia/docker-mysql-5.6) | [mysql 5.7](https://github.com/cytopia/docker-mysql-5.7) | [mariadb 5](https://github.com/cytopia/docker-mariadb-5) | [mariadb 10](https://github.com/cytopia/docker-mariadb-10)**
 
 ----
 
-## Usage
+**MySQL 5.5 Docker on CentOS 7**
 
-```shell
-$ docker run -i -e MYSQL_ROOT_PASSWORD=my-secret-pw -t cytopia/mysql-5.5
-```
+[![Devilbox](https://raw.githubusercontent.com/cytopia/devilbox/master/.devilbox/www/htdocs/assets/img/devilbox_80.png)](https://github.com/cytopia/devilbox)
+
+<sub>This docker image is part of the **[devilbox](https://github.com/cytopia/devilbox)**</sub>
+
+----
 
 ## Options
-
 
 ### Environmental variables
 
@@ -34,10 +32,8 @@ $ docker run -i -e MYSQL_ROOT_PASSWORD=my-secret-pw -t cytopia/mysql-5.5
 |----------|------|---------|-------------|
 | DEBUG_COMPOSE_ENTRYPOINT | bool | `0` | Show shell commands executed during start.<br/>Value: `0` or `1` |
 | TIMEZONE | string | `UTC` | Set docker OS timezone.<br/>Example: `Europe/Berlin` |
-| MYSQL_SOCKET_DIR | string | `/var/sock/mysqld` | Path inside the docker to the socket directory.<br/><br/>Used to separate socket directory from data directory in order to mount it to the docker host or other docker containers. |
+| MYSQL_SOCKET_DIR | string | `/var/sock/mysqld` | Path inside the docker to the socket directory.<br/><br/>Used to separate socket directory from data directory in order to mount it to the docker host or other docker containers.<br/><br/>Mount this directory to a PHP container and be able to use `mysqli_connect` with `localhost`. |
 | MYSQL_GENERAL_LOG | bool | `0` | Turn on or off general logging<br/>Corresponds to mysql config: `general-log`<br/>Value: `0` or `1` |
-
-
 
 ### Default mount points
 
@@ -48,24 +44,75 @@ $ docker run -i -e MYSQL_ROOT_PASSWORD=my-secret-pw -t cytopia/mysql-5.5
 | /var/sock/mysqld | MySQL socket dir |
 | /etc/mysql/conf.d | MySQL configuration directory (used to overwrite MySQL config) |
 
-
 ### Default ports
 
 | Docker | Description |
 |--------|-------------|
 | 3306   | MySQL listening Port |
 
+## Usage
 
-## MySQL Configuration
+**1. Listen on loopback interface only**
+
+```bash
+$ docker run -i \
+    -p 127.0.0.1:3306:3306 \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    -t cytopia/mysql-5.5
+
+# Access MySQL from your host computer
+$ mysql --user=root --password=my-secret-pw --host=127.0.0.1 -e 'show databases;'
+```
+
+**2. Enable logging**
+
+Enable logging and mount the log directory to your host to `~tmp/mysql-log`
+```bash
+$ docker run -i \
+    -p 127.0.0.1:3306:3306 \
+    -v ~tmp/mysql-log:/var/log/mysql \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    -e MYSQL_GENERAL_LOG=1 \
+    -t cytopia/mysql-5.5
+
+# Access MySQL from your host computer
+$ mysql --user=root --password=my-secret-pw --host=127.0.0.1 -e 'show databases;'
+```
+
+**3. Mount MySQL socket to the host**
+
+Use MySQL socket for `localhost` connections through the socket. No need to expose the MySQL port to the host in this case.
+```bash
+$ docker run -i \
+    -v ~tmp/mysql-sock:/var/sock/mysqld \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    -t cytopia/mysql-5.5
+
+# Access MySQL from your host computer via socket
+$ mysql --user=root --password=my-secret-pw --socket=/var/sock/mysqld/mysqld.sock -e 'show databases;'
+```
+
+**4. Overwrite configuration**
+
+You can also add any configuration settings prior startup to MySQL.
+```bash
+# Create local config with buffer overwrite
+$ printf "[mysqld]\n%s\n" "key_buffer = 500M" > ~/tmp/mysqld_config/buffer.cnf
+
+$ docker run -i \
+    -p 127.0.0.1:3306:3306 \
+    -v ~/tmp/mysqld_config:/etc/mysql/conf.d \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    -t cytopia/mysql-5.5
+```
+
+## MySQL Configuration overview
 
 Configuration files inside this docker are read in the following order:
 
-1. /etc/my.cnf
-2. /etc/mysql/my.cnf
-3. /etc/mysql/docker-default.d/*.cnf
-4. /etc/mysql/conf.d/*.cnf
-
-
-* `/etc/my.cnf` and `/etc/mysql/my.cnf` are operating system defaults.
-* `/etc/mysql/docker-default.d/*.cnf` provides defaults via this dockers optional environmental variables (`socket` and `general_log`)
-* `/etc/mysql/conf.d/` can be mounted to provide custom `*.cnf` files which can overwrite anything.
+| Order | File | Description |
+|-------|------|-------------|
+| 1     | `/etc/my.cnf` | Operating system default |
+| 2     | `/etc/mysql/my.cnf` | Operating system default |
+| 3     | `/etc/mysql/docker-default.d/*.cnf` | Alters additional settings via this dockers optional environmental variables (`socket` and `general_log`) |
+| 4     | `/etc/mysql/conf.d/` | Can be mounted to provide custom `*.cnf` files which can overwrite anything of the above. |

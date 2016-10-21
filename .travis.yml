@@ -1,0 +1,67 @@
+language: python
+python:
+  - 2.7
+
+###
+### Add services
+###
+services:
+  - docker
+
+
+###
+### Global variables
+###
+env:
+  global:
+    - MY_DOCKER_NAME="my-db-docker"
+    - MY_MYSQL_PASS="toor"
+
+
+###
+### Install
+###
+install:
+  - docker version
+
+  # Build my docker
+  - docker build -t cytopia/${MY_DOCKER_NAME} .
+
+
+
+###
+### Test
+###
+script:
+
+  ##
+  ## 01.) [a](DEBUG) Test plain docker
+  ##
+  - docker run
+      -p 127.0.0.1:3306:3306
+      -e DEBUG_COMPOSE_ENTRYPOINT=1
+      -e MYSQL_ROOT_PASSWORD=${MY_MYSQL_PASS}
+      --name ${MY_DOCKER_NAME} cytopia/${MY_DOCKER_NAME} &
+  - sleep 15
+
+  - docker ps
+
+  - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e 'SHOW DATABASES;'
+
+  - docker stop "$( docker ps | grep  "${MY_DOCKER_NAME}" | awk '{print $1}' )"
+  - docker rm "${MY_DOCKER_NAME}"
+  ##
+  ## 01.) [b](SILENT) Test plain docker
+  ##
+  - docker run
+      -p 127.0.0.1:3306:3306
+      -e MYSQL_ROOT_PASSWORD=${MY_MYSQL_PASS}
+      --name ${MY_DOCKER_NAME} cytopia/${MY_DOCKER_NAME} &
+  - sleep 15
+
+  - docker ps
+
+  - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e 'SHOW DATABASES;'
+
+  - docker stop "$( docker ps | grep  "${MY_DOCKER_NAME}" | awk '{print $1}' )"
+  - docker rm "${MY_DOCKER_NAME}"
