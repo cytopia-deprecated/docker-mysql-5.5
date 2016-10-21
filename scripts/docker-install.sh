@@ -119,6 +119,9 @@ run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_DAT}"
 run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_SCK}"
 run "chown -R ${MY_USER}:${MY_GROUP} ${MYSQL_DEF_PID}"
 
+run "chmod 777 ${MYSQL_DEF_DAT}"
+run "chmod 777 ${MYSQL_DEF_SCK}"
+run "chmod 777 ${MYSQL_DEF_PID}"
 
 
 # Add default config

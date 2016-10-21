@@ -183,7 +183,11 @@ set_mysql_custom_settings "client" "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "$
 set_mysql_custom_settings "mysql"  "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "${DB_CUSTOM_CONF_DIR}/socket.cnf"
 set_mysql_custom_settings "mysqld" "socket" "MYSQL_SOCKET_DIR" "/mysqld.sock" "${DB_CUSTOM_CONF_DIR}/socket.cnf"
 
-
+if [ ! -d "${DB_CUSTOM_CONF_DIR}" ]; then
+	run "mkdir -p ${DB_CUSTOM_CONF_DIR}"
+fi
+run "chown ${DB_USER}:${DB_GROUP} ${DB_CUSTOM_CONF_DIR}"
+run "chmod 777 ${DB_CUSTOM_CONF_DIR}"
 
 
 
