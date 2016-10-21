@@ -23,14 +23,17 @@ env:
 ###
 install:
 
+  # Create directories
   - mkdir -p /tmp/mysql-log
   - mkdir -p /tmp/mysql-sock
   - mkdir -p /tmp/mysql-conf
 
+  # Set permission
   - chmod -R 777 /tmp/mysql-log
   - chmod -R 777 /tmp/mysql-sock
   - chmod -R 777 /tmp/mysql-conf
 
+  # Show Docker version
   - docker version
 
   # Build my docker
