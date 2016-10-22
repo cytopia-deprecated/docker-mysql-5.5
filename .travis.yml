@@ -208,7 +208,7 @@ script:
   - docker run
       -p 127.0.0.1:3306:3306
       -v /tmp/mysql-conf:/etc/mysql/conf.d
-      -e MYSQL_SOCKET_DIR=/usr/local/mysql-sock
+      -e MYSQL_SOCKET_DIR=/tmp/mysqld
       -e DEBUG_COMPOSE_ENTRYPOINT=1
       -e MYSQL_ROOT_PASSWORD=${MY_MYSQL_PASS}
       --name ${MY_DOCKER_NAME} cytopia/${MY_DOCKER_NAME} &
@@ -222,7 +222,7 @@ script:
   - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e "SHOW VARIABLES WHERE Variable_name LIKE '%key%buffer%';"
 
   # Validate configuration file
-  - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e "SHOW VARIABLES WHERE Variable_name LIKE '%socket%';" | grep '/usr/local/mysql-sock'
+  - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e "SHOW VARIABLES WHERE Variable_name LIKE '%socket%';" | grep '/tmp/mysqld/mysqld.sock'
 
   - docker stop "$( docker ps | grep  "${MY_DOCKER_NAME}" | awk '{print $1}' )"
   - docker rm "${MY_DOCKER_NAME}"
