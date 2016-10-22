@@ -28,6 +28,10 @@ install:
   - mkdir -p /tmp/mysql-sock
   - mkdir -p /tmp/mysql-conf
 
+  # Pre-create logfiles
+  - touch /tmp/mysql-log/error.log
+  - touch /tmp/mysql-log/mysql.log
+
   # Set permission
   - chmod -R 777 /tmp/mysql-log
   - chmod -R 777 /tmp/mysql-sock
@@ -110,7 +114,6 @@ script:
   - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e "SHOW VARIABLES WHERE Variable_name LIKE '%general%log%';" | grep 'ON'
 
   - ls -la /tmp/mysql-log
-  - chmod -R 777 /tmp/mysql-log
   - cat /tmp/mysql-log/error.log
   - cat /tmp/mysql-log/mysql.log
 
@@ -138,7 +141,6 @@ script:
   - mysql --user=root --password=${MY_MYSQL_PASS} --host=127.0.0.1 -e "SHOW VARIABLES WHERE Variable_name LIKE '%general%log%';" | grep 'ON'
 
   - ls -la /tmp/mysql-log
-  - chmod -R 777 /tmp/mysql-log
   - cat /tmp/mysql-log/error.log
   - cat /tmp/mysql-log/mysql.log
 
